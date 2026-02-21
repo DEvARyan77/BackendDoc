@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Symptom Checker</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: #f5f7fa;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            margin-top: 0;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            resize: vertical;
+            transition: border 0.2s;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            font-size: 18px;
+            border-radius: 40px;
+            cursor: pointer;
+            margin-top: 15px;
+            width: 100%;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        #result {
+            margin-top: 30px;
+            border-top: 2px solid #ecf0f1;
+            padding-top: 20px;
+        }
+        .card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #3498db;
+        }
+        .disease-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        .confidence {
+            color: #7f8c8d;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        .section {
+            margin-bottom: 15px;
+        }
+        .section-title {
+            font-weight: 600;
+            color: #34495e;
+            margin-bottom: 5px;
+            font-size: 18px;
+        }
+        .section-content {
+            color: #2c3e50;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        .show-more {
+            color: #3498db;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-left: 5px;
+        }
+        .show-more:hover {
+            color: #2980b9;
+        }
+        .other-conditions {
+            margin-top: 20px;
+            padding: 15px;
+            background: #ecf0f1;
+            border-radius: 8px;
+        }
+        .other-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #34495e;
+        }
+        .other-item {
+            display: inline-block;
+            background: white;
+            padding: 5px 15px;
+            border-radius: 30px;
+            margin: 0 5px 5px 0;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .error {
+            color: #e74c3c;
+            text-align: center;
+            padding: 20px;
+        }
+        .loader {
+            text-align: center;
+            padding: 30px;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🩺 AI Symptom Checker</h1>
+        <p>Describe your symptoms in a few sentences. Our AI will suggest possible conditions.</p>
+        <textarea id="symptomsInput" placeholder="e.g., I have a persistent headache, fever, and a sore throat..."></textarea>
+        <button id="checkBtn">Check Symptoms</button>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_URL = ''; // empty means same origin (served from same server)
+
+        document.getElementById('checkBtn').addEventListener('click', async () => {
+            const input = document.getElementById('symptomsInput').value.trim();
+            if (!input) {
+                alert('Please enter your symptoms.');
+                return;
+            }
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="loader">🤔 Analyzing your symptoms...</div>';
+
+            const btn = document.getElementById('checkBtn');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(API_URL + '/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: input })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                renderResults(data.predictions);
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        function renderResults(predictions) {
+            if (!predictions || predictions.length === 0) {
+                document.getElementById('result').innerHTML = '<div class="error">No predictions returned.</div>';
+                return;
+            }
+
+            const top = predictions[0];
+            let html = `<div class="card">`;
+            html += `<div class="disease-name">${top.disease}</div>`;
+            html += `<div class="confidence">Confidence: ${(top.confidence * 100).toFixed(1)}%</div>`;
+
+            if (top.details) {
+                if (top.details.description) {
+                    html += `<div class="section"><div class="section-title">📝 Description</div><div class="section-content">${top.details.description}</div></div>`;
+                }
+                if (top.details.symptoms) {
+                    html += `<div class="section"><div class="section-title">🤒 Common Symptoms</div><div class="section-content">${top.details.symptoms}</div></div>`;
+                }
+                if (top.details.treatment) {
+                    html += `<div class="section"><div class="section-title">💊 Typical Treatments</div><div class="section-content">${top.details.treatment}</div></div>`;
+                }
+                if (top.details.medications && top.details.medications.length) {
+                    let meds = top.details.medications;
+                    // Show first 10, hide the rest behind a "show more" link
+                    let visibleMeds = meds.slice(0, 10);
+                    let hiddenMeds = meds.slice(10);
+                    html += `<div class="section"><div class="section-title">💉 Common Medications</div><div class="section-content">`;
+                    html += visibleMeds.join(', ');
+                    if (hiddenMeds.length > 0) {
+                        html += ` <span class="show-more" onclick="this.style.display='none'; this.nextElementSibling.style.display='inline';">... and ${hiddenMeds.length} more</span>`;
+                        html += `<span style="display:none;">, ${hiddenMeds.join(', ')}</span>`;
+                    }
+                    html += `</div></div>`;
+                }
+                if (top.details.tests && top.details.tests.length) {
+                    html += `<div class="section"><div class="section-title">🔬 Common Tests</div><div class="section-content">${top.details.tests.join(', ')}</div></div>`;
+                }
+                if (top.details.riskGroups) {
+                    html += `<div class="section"><div class="section-title">⚠️ Who Is at Risk</div><div class="section-content">${top.details.riskGroups}</div></div>`;
+                }
+            }
+
+            html += '</div>';
+
+            // Other possible conditions
+            if (predictions.length > 1) {
+                html += '<div class="other-conditions">';
+                html += '<div class="other-title">Other possibilities:</div>';
+                for (let i = 1; i < predictions.length; i++) {
+                    html += `<span class="other-item">${predictions[i].disease} (${(predictions[i].confidence * 100).toFixed(1)}%)</span>`;
+                }
+                html += '</div>';
+            }
+
+            document.getElementById('result').innerHTML = html;
+        }
+    </script>
+</body>
+</html>
