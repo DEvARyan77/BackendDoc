@@ -7,7 +7,14 @@ const path = require('path');
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static('public')); // serve frontend
+
+// Serve static files from the 'public' folder using absolute path
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Explicit route for the root – serves index.html
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Global variables
 let vectorizerParams;
@@ -49,7 +56,6 @@ async function loadAssets() {
     }
 }
 
-// Start loading and attach the promise
 const assetsPromise = loadAssets();
 
 // Middleware to wait for assets before processing requests
@@ -62,7 +68,7 @@ app.use(async (req, res, next) => {
     }
 });
 
-// ----- Helper functions (copied from your original) -----
+// ----- Helper functions (copy from your original) -----
 function vectorizeText(text) {
     const words = text.toLowerCase().split(/\W+/);
     const vocab = vectorizerParams.vocabulary;
